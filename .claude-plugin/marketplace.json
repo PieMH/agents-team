@@ -1,0 +1,17 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "agents-team",
+  "description": "agents-team: an orchestrator skill that runs big tasks through tiered Haiku/Sonnet/Opus subagents.",
+  "owner": {
+    "name": "PieMH",
+    "url": "https://github.com/PieMH"
+  },
+  "plugins": [
+    {
+      "name": "agents-team",
+      "description": "Orchestrated multi-agent work with tiered models, escalation, worktrees, a context gate and a final QA pass.",
+      "source": "./",
+      "category": "productivity"
+    }
+  ]
+}

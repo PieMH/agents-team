@@ -1,0 +1,125 @@
+# Core picks: the agency-agents specialists the owner uses now or soon (★ in the catalog).
+# One slug (file name without .md) per line. A category install copies these; --all copies the whole category.
+
+# engineering
+engineering-frontend-developer
+engineering-backend-architect
+engineering-ai-engineer
+engineering-rapid-prototyper
+engineering-senior-developer
+engineering-autonomous-optimization-architect
+engineering-code-reviewer
+engineering-database-optimizer
+engineering-git-workflow-master
+engineering-software-architect
+engineering-cms-developer
+engineering-voice-ai-integration-engineer
+engineering-prompt-engineer
+engineering-payments-billing-engineer
+engineering-i18n-engineer
+engineering-wordpress-performance
+engineering-devops-automator
+engineering-developer-tooling-engineer
+engineering-rag-pipeline-engineer
+engineering-privacy-engineer
+engineering-data-visualization-engineer
+engineering-pdf-engine-architect
+engineering-universal-document-compiler
+
+# design
+design-ui-designer
+design-ux-researcher
+design-ux-architect
+design-brand-guardian
+design-visual-storyteller
+design-whimsy-injector
+design-image-prompt-engineer
+design-ui-finish-gate-reviewer
+
+# paid-media
+paid-media-tracking-specialist
+paid-media-paid-social-strategist
+
+# sales
+sales-outbound-strategist
+sales-discovery-coach
+sales-engineer
+sales-coach
+sales-offer-lead-gen-strategist
+
+# marketing
+marketing-content-creator
+marketing-instagram-curator
+marketing-reddit-community-builder
+marketing-social-media-strategist
+marketing-tiktok-strategist
+marketing-carousel-growth-engine
+marketing-seo-specialist
+marketing-short-video-editing-coach
+marketing-ai-citation-strategist
+marketing-video-optimization-specialist
+
+# product
+product-sprint-prioritizer
+product-trend-researcher
+product-behavioral-nudge-engine
+product-manager
+
+# project-management
+project-management-studio-producer
+project-management-meeting-notes-specialist
+
+# testing
+testing-evidence-collector
+testing-performance-benchmarker
+
+# security
+security-architect
+security-penetration-tester
+security-incident-responder
+security-senior-secops
+security-compliance-auditor
+security-ai-generated-code-auditor
+security-secrets-credential-engineer
+
+# support
+support-support-responder
+support-analytics-reporter
+support-finance-tracker
+support-legal-compliance-checker
+
+# spatial-computing
+xr-interface-architect
+
+# specialized
+agents-orchestrator
+sales-outreach
+specialized-developer-advocate
+specialized-mcp-builder
+specialized-document-generator
+automation-governance-architect
+personal-growth-mentor
+customer-service
+language-translator
+legal-client-intake
+legal-document-review
+data-privacy-officer
+
+# finance
+finance-investment-researcher
+
+# game-development
+game-designer
+level-designer
+technical-artist
+game-audio-engineer
+narrative-designer
+economy-designer
+unreal-systems-engineer
+unreal-technical-artist
+unreal-multiplayer-architect
+unreal-world-builder
+blender-addon-engineer
+
+# research
+research-synthesist

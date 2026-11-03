@@ -1,0 +1,13 @@
+{
+  "name": "agents-team",
+  "version": "0.4.0",
+  "description": "Orchestrated multi-agent work: the session plans, routes and reviews; Haiku, Sonnet and Opus subagents do the work in parallel with escalation on failure, then an Opus QA pass. Context-aware, ledger-backed, git worktrees per task.",
+  "author": {
+    "name": "PieMH",
+    "url": "https://github.com/PieMH"
+  },
+  "homepage": "https://github.com/PieMH/agents-team",
+  "repository": "https://github.com/PieMH/agents-team",
+  "license": "MIT",
+  "keywords": ["orchestration", "subagents", "multi-agent", "token-efficiency", "worktrees"]
+}
