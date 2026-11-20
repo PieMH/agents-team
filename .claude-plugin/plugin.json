@@ -1,7 +1,7 @@
 {
   "name": "agents-team",
-  "version": "0.4.0",
-  "description": "Orchestrated multi-agent work: the session plans, routes and reviews; Haiku, Sonnet and Opus subagents do the work in parallel with escalation on failure, then an Opus QA pass. Context-aware, ledger-backed, git worktrees per task.",
+  "version": "0.5.0",
+  "description": "Orchestrated multi-agent work: the Opus session plans, routes, reviews, does the pivotal tasks and the final QA; light tasks run on a local model when the machine has one (else Haiku), hard ones on Sonnet, in parallel with escalation on failure. Context-aware, ledger-backed, git worktrees per task.",
   "author": {
     "name": "PieMH",
     "url": "https://github.com/PieMH"
