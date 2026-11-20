@@ -1,5 +1,5 @@
 {
-  "description": "agents-team context gate: holds new subagent spawns once the orchestrator's context passes the run's threshold",
+  "description": "agents-team context gate: holds new subagent spawns and local worker launches once the orchestrator's context passes the run's threshold",
   "hooks": {
     "PreToolUse": [
       {
@@ -7,6 +7,18 @@
         "hooks": [
           {
             "type": "command",
+            "command": "node",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/context-gate.mjs"],
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "Bash(*local-llm.mjs* work *)",
             "command": "node",
             "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/context-gate.mjs"],
             "timeout": 10

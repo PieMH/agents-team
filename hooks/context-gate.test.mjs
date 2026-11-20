@@ -23,6 +23,11 @@ assert.equal(call().hookSpecificOutput.permissionDecision, 'deny', 'past thresho
 assert.match(call().hookSpecificOutput.permissionDecisionReason, /~602k, past the run's 500k/);
 assert.equal(call({ agent_id: 'a1' }), null, 'subagent call -> silent');
 assert.equal(call({ session_id: 's2' }), null, 'other session -> silent');
+const bash = (command) => call({ tool_name: 'Bash', tool_input: { command } });
+assert.equal(bash('node "C:/p/skills/agents-team/local-llm.mjs" work .agents-team/wt/T1 b.md').hookSpecificOutput.permissionDecision,
+  'deny', 'local worker launch past threshold -> deny');
+assert.equal(bash('git status'), null, 'other Bash -> silent');
+assert.equal(bash('node "C:/p/skills/agents-team/local-llm.mjs" down'), null, 'local down/up/status are never held');
 writeRun({ status: 'running', session: 's1', compact: true, threshold: 700000 });
 assert.equal(call(), null, 'under threshold -> silent');
 writeRun({ status: 'running', session: 's1', compact: false, threshold: 500000 });

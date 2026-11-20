@@ -1,5 +1,5 @@
-// PreToolUse(Agent) hook for agents-team runs. Once the orchestrator's context passes the run's
-// threshold, new subagent spawns are denied so the user can compact between agents (SKILL.md §7).
+// PreToolUse hook for agents-team runs. Once the orchestrator's context passes the run's threshold, new
+// spawns (Agent calls and local-tier `local-llm.mjs work` launches) are denied so the user can compact (SKILL.md §7).
 // Silent unless .agents-team/run.json says a run is active in this session with compact on.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -23,6 +23,8 @@ export function contextTokens(transcript) {
 
 export function gate(input, projectDir) {
   if (input.agent_id) return null; // a call made inside a subagent
+  // Bash reaches the gate only to hold local-tier worker launches; every other command passes untouched
+  if (input.tool_name === 'Bash' && !/local-llm\.mjs\S*\s+work\s/.test(input.tool_input?.command || '')) return null;
   let run;
   try { run = JSON.parse(fs.readFileSync(path.join(projectDir, '.agents-team', 'run.json'), 'utf8')); } catch { return null; }
   if (run.status !== 'running' || run.compact === false) return null;
