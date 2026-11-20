@@ -1,6 +1,6 @@
 # agents-team
 
-Run big pieces of work in Claude Code as a team. Your session becomes the orchestrator. It plans the work, splits it into scoped tasks, hands each task to a Haiku, Sonnet or Opus subagent and checks every result. Failed tasks go to a stronger model. An Opus QA agent reviews the whole change before you see it.
+Run big pieces of work in Claude Code as a team. Your session becomes the orchestrator. It plans the work, splits it into scoped tasks, and hands each task to a worker: light tasks to a local model on your machine (when it has one) or Haiku, hard ones to Sonnet. It checks every result and does the few pivotal tasks itself. Failed tasks go to a stronger worker. Before you see the change, the orchestrator reviews all of it in a final QA pass.
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) ![Claude Code plugin](https://img.shields.io/badge/Claude%20Code-plugin-d97757) ![Node 18+](https://img.shields.io/badge/node-18%2B-339933)
 
@@ -12,12 +12,12 @@ Run big pieces of work in Claude Code as a team. Your session becomes the orches
 
 On a large task, one long session fills its context with file contents and command output, and every step runs on the same expensive model. agents-team keeps the orchestrator's context small, because the code reading and editing happen inside the subagents, and most of the work runs on cheaper models. The orchestrator only plans, routes and verifies.
 
-- Mechanical edits go to Haiku, feature work to Sonnet, and pivotal or risky tasks to Opus.
-- A rejected task goes to a fresh, stronger agent, never back to the one that failed.
-- The orchestrator reads each task's diff and the checks it claims. A read-only Opus QA pass then reviews the whole change, including the seams between tasks.
+- Light work goes to a local model (free) or Haiku, feature work to Sonnet. Opus is never spawned: the few pivotal or risky tasks are done by the orchestrator itself.
+- A rejected task goes to a fresh, stronger worker, never back to the one that failed.
+- The orchestrator reads each task's diff and the checks it claims. It then reviews the whole change in a read-only QA pass, including the seams between tasks.
 - Work happens on a run branch, with one git worktree per task. Nothing is merged into your branch or pushed unless you ask.
 - A ledger in the project records the plan, the queue, every verdict and the next step, so a crash or a `/compact` loses nothing. `/agents-team --resume` picks up where the run stopped.
-- Subagents are spawned with Claude Code's own Agent tool, inside your interactive session. It needs no API key and never runs `claude -p`.
+- Haiku and Sonnet workers are spawned with Claude Code's own Agent tool, inside your interactive session, and need no API key. Local workers are headless `claude --bare -p` runs against your own server; no Anthropic login reaches it.
 
 ## Install
 
@@ -35,7 +35,8 @@ Optional companions, used automatically when present:
 | Companion | What it adds |
 |---|---|
 | [agency-agents](https://github.com/msitarzewski/agency-agents) | About 280 specialist roles. Each task gets one (Frontend Developer, Security Architect, Database Optimizer…), and the orchestrator works in the library's *Agents Orchestrator* persona |
-| [ponytail](https://github.com/DietrichGebert/ponytail) | Workers write the smallest complete change at a ponytail level matched to their effort, and QA reviews with `ponytail-review` |
+| [ponytail](https://github.com/DietrichGebert/ponytail) | Workers write the smallest complete change at a ponytail level matched to their effort, and the final QA reviews with `ponytail-review` |
+| A local LLM server ([Strata](https://github.com/Niko1221/Strata), llama.cpp, LM Studio, Ollama) | Light tasks run on your own machine instead of Haiku (see [Local model](#local-model-optional)) |
 | [rtk](https://github.com/rtk-ai/rtk) | Compact shell output for every agent, through rtk's own hook |
 
 ## Use
@@ -64,28 +65,53 @@ If the work fits in one small task, the orchestrator says it's too small for a t
 
 ## How a run works
 
-1. **Understand.** The orchestrator reads the request, the project's `CLAUDE.md`, and only the code it needs to plan. For a wide survey it sends a Haiku scout instead of reading everything itself. If an unclear requirement would change the plan, it asks you once, up front.
-2. **Plan.** It splits the work into tasks. Each task has owned files (the only files it may edit), dependencies, acceptance criteria, a way to verify it, a model tier and a specialist role. You see the plan as a table, and dispatch starts in the same turn. Press Esc to stop it.
-3. **Dispatch.** Up to `--parallel` workers run at once. A new one starts as soon as one finishes.
+1. **Understand.** The orchestrator reads the request, the project's `CLAUDE.md`, and only the code it needs to plan. For a wide survey it sends a light-tier scout instead of reading everything itself. If an unclear requirement would change the plan, it asks you once, up front.
+2. **Plan.** It splits the work into tasks. Each task has owned files (the only files it may edit), dependencies, acceptance criteria, a way to verify it, a tier and a specialist role. If the plan has light tasks and your machine has a local model, it starts the model now. You see the plan as a table, and dispatch starts in the same turn. Press Esc to stop it.
+3. **Dispatch.** Up to `--parallel` workers run at once, at most one of them on the local model. A new one starts as soon as one finishes.
 4. **Verify.** Workers report in a fixed, short format with evidence. The orchestrator reads the diff and reruns the decisive check when the evidence is thin, then accepts or rejects the task.
-5. **Escalate.** A new agent, one step up the ladder, retries a rejected task:
+5. **Escalate.** A fresh worker, one step up the ladder, retries a rejected task:
 
    ```
-   haiku → sonnet → opus → opus at +2 effort (usually max) → you decide
+   local → haiku → sonnet → the orchestrator itself → you decide
    ```
 
-6. **QA.** An Opus agent reviews the whole change read-only, runs the project's checks and ranks its findings. Each real finding becomes a new task, with at most two extra QA rounds.
-7. **Close.** You get a summary of what was built, each task's path (`haiku ✗ → sonnet ✓`), the QA verdict, any open items, and the run branch to merge, squash or open as a PR.
+6. **QA.** The orchestrator reviews the whole change read-only, runs the project's checks and ranks its findings. Each real finding becomes a new task, with at most two extra QA rounds.
+7. **Close.** It stops the local model if the run started it. You get a summary of what was built, each task's path (`local ✗ → haiku ✓`), the QA verdict, any open items, and the run branch to merge, squash or open as a PR.
 
-### Model tiers
+### Tiers
 
-| Tier | Gets |
-|---|---|
-| **Haiku** | Low to medium-low difficulty: scouting, inventories, call-site hunts, mechanical edits that copy an existing pattern, small changes with a clear spec |
-| **Sonnet** | Medium-high to high difficulty: features, bug fixes, tests, refactors |
-| **Opus** | Very complex or pivotal work: architecture-setting code, cross-cutting changes, concurrency, security, data migrations, bugs of unknown cause |
+| Tier | Runs on | Gets |
+|---|---|---|
+| **light** | Your local model when the machine has one and it can start; otherwise **Haiku 5.5** | Low and medium difficulty: scouting, inventories, call-site hunts, mechanical edits that copy an existing pattern, contained changes with a clear spec and a check |
+| **sonnet** | **Sonnet 5.5** | High difficulty: features, bug fixes, tests, refactors |
+| **inline** | The orchestrator itself (your session's model, e.g. Opus) | The few pivotal tasks: architecture-setting code, cross-cutting changes, concurrency, security, data migrations, bugs of unknown cause |
 
 When a task sits between two tiers, the orchestrator picks the higher one, because a failed attempt costs more than the difference.
+
+### Local model (optional)
+
+On a machine with a local LLM server that speaks Anthropic's `/v1/messages`, light tasks run there and cost no tokens. Examples are [Strata](https://github.com/Niko1221/Strata), llama.cpp's `llama-server`, LM Studio 0.4.1+ and Ollama 0.14+. Tell agents-team how to start and stop it in `~/.agents-team/local.json`, once per machine. Without that file the run uses Haiku, so every other machine works as before.
+
+```json
+{
+  "url": "http://127.0.0.1:8080",
+  "start": "set \"STRATA_DATA_DIR=C:\\AI\\Strata\" && \"C:\\AI\\Strata\\terminal\\current\\bin\\strata.cmd\" launch --model iq3_s --model-path \"C:\\AI\\models\\ISTA-IQ3_S\" --context 64k --parallel 1 --access local --port 8080 --no-tui --yes",
+  "stop": "set \"STRATA_DATA_DIR=C:\\AI\\Strata\" && \"C:\\AI\\Strata\\terminal\\current\\bin\\strata.cmd\" launch --stop",
+  "minFreeGB": 60
+}
+```
+
+On Windows, keep Strata outside `AppData`: install it with `$env:STRATA_DATA_DIR` set, and set `STRATA_COMPONENTS_DIR` (the engine) and `STRATA_INSTALL_DIR` (its run settings) in `start` and `stop` as well. The Claude desktop app is a packaged app: anything run from inside it that writes to `AppData` is redirected into the app's private folder. Strata's shortcut and engine then end up where a normal terminal can't reach them.
+
+- `start` and `stop` are shell commands. `start` may return once the server answers (Strata) or keep running (`llama-server`). Optional keys:
+  - `minFreeGB`: the RAM the server needs before agents-team starts it.
+  - `model` (default `local`).
+  - `contextTokens` (default `65536`): match the server's context.
+  - `startTimeoutSec` (default `600`).
+  - `workTimeoutMin` (default `45`).
+- The orchestrator starts the server only when the plan has light tasks, the server isn't already up, and enough RAM is free. It stops the server when the light tasks are done, but never one you started yourself. If the server can't start, light tasks go to Haiku and you get one line saying why.
+- Check a machine with `node skills/agents-team/local-llm.mjs status` (from the plugin folder).
+- A local worker runs `claude --bare -p` in its worktree, with its own empty profile (`~/.agents-team/claude-local`) and a dummy key. The local server never sees your login.
 
 ### Git mode and plain mode
 
@@ -98,7 +124,7 @@ Everything lives in `.agents-team/` in your project: `run.json` holds the run st
 
 ### Context gate
 
-Each time the orchestrator spawns an agent, the plugin's `PreToolUse` hook reads the orchestrator's real context size from the session transcript. Past `--compact-at`, it holds new spawns while the running agents finish. The orchestrator then hands you a ready-made `/compact …` line and `/agents-team --resume`. Compacting is only a recommendation: say "continue" to go on without it. Outside an active run in the current session, the hook does nothing.
+Each time the orchestrator spawns an agent or launches a local worker, the plugin's `PreToolUse` hook reads the orchestrator's real context size from the session transcript. Past `--compact-at`, it holds new spawns while the running agents finish. The orchestrator then hands you a ready-made `/compact …` line and `/agents-team --resume`. Compacting is only a recommendation: say "continue" to go on without it. Outside an active run in the current session, the hook does nothing.
 
 ### Specialists
 
@@ -124,9 +150,9 @@ This records the project's categories in `.claude/agency.json` and installs thei
 | `skills/agency/SKILL.md` | Per-project specialist categories (`/agents-team:agency`) |
 | `skills/agency/agency.mjs` | Catalog tool: index, `list`, `install` |
 | `skills/agency/core.txt` | Core picks (★), copied by a category install |
+| `skills/agents-team/local-llm.mjs` | Local tier: `status`, `up`, `down`, `work` |
 | `agents/worker.md` | Worker contract: scope, workspace, verification, report format |
-| `agents/qa.md` | Final QA: read-only review, ranked findings |
-| `hooks/context-gate.mjs` | The context-gate hook |
+| `hooks/context-gate.mjs` | The context-gate hook (Agent spawns and local worker launches) |
 | `.claude-plugin/` | Plugin manifest and marketplace entry |
 
 ## Development
@@ -137,6 +163,7 @@ claude plugin marketplace add ./agents-team        # a local-path marketplace lo
 claude plugin install agents-team@agents-team
 node agents-team/hooks/context-gate.test.mjs       # self-checks: plain Node, no dependencies
 node agents-team/skills/agency/agency.test.mjs
+node agents-team/skills/agents-team/local-llm.test.mjs
 ```
 
 Edits to a local-path install apply after `/reload-plugins`. Contributor notes are in [CLAUDE.md](CLAUDE.md).

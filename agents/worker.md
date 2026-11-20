@@ -1,6 +1,6 @@
 ---
 name: worker
-description: agents-team worker. Executes exactly one scoped task from an agents-team orchestrator brief, verifies it, and reports with evidence. Spawned only by the agents-team skill.
+description: agents-team worker. Executes exactly one scoped task from an agents-team orchestrator brief, verifies it, and reports with evidence. Spawned only by the agents-team skill (as a Haiku or Sonnet subagent, or headless on the local model).
 model: sonnet
 color: cyan
 ---
