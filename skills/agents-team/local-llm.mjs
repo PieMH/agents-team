@@ -77,8 +77,18 @@ export function down(cfg) {
   return { local: 'stopped', ok: r.status === 0 };
 }
 
+// --bare never loads CLAUDE.md (not even with --add-dir), so the worker contract carries the project's own copy.
+// shortcut: the root CLAUDE.md only, not nested or user-level ones; add them if a project relies on those.
+export function workerPrompt(dir) {
+  const claudeMd = path.join(dir, 'CLAUDE.md');
+  return fs.readFileSync(path.join(here, '..', '..', 'agents', 'worker.md'), 'utf8')
+    + (fs.existsSync(claudeMd) ? `\n\n# This project's CLAUDE.md\n\n${fs.readFileSync(claudeMd, 'utf8')}` : '');
+}
+
 export function work(cfg, dir, brief, rules = []) {
   if (!cfg) return { status: 'blocked', reason: 'no local model on this machine' };
+  const sys = `${brief}.system.md`;
+  fs.writeFileSync(sys, workerPrompt(dir));
   const env = {
     ...process.env,
     CLAUDE_CONFIG_DIR: path.join(home, 'claude-local'), // its own empty profile, never the user's login
@@ -97,10 +107,11 @@ export function work(cfg, dir, brief, rules = []) {
   delete env.CLAUDE_CODE_OAUTH_TOKEN;
   const lib = process.env.AGENCY_AGENTS_DIR || path.join(os.homedir(), '.agency-agents');
   const args = ['--bare', '-p', '--output-format', 'json', '--permission-mode', 'acceptEdits',
-    '--tools', 'Read,Edit,Write,Bash,Glob,Grep',
-    '--append-system-prompt-file', path.join(here, '..', '..', 'agents', 'worker.md'),
+    '--no-session-persistence', '--tools', 'Read,Edit,Write,Bash,Glob,Grep', '--append-system-prompt-file', sys,
     ...(fs.existsSync(lib) ? ['--add-dir', lib] : []), // so a brief's Role: file can be read
-    '--allowedTools', 'Bash(git *)', ...rules];
+    // only the git a worker needs: no push, reset, checkout or clean without asking (and -p can't ask)
+    '--allowedTools', 'Bash(git status*)', 'Bash(git diff*)', 'Bash(git log*)', 'Bash(git show*)',
+    'Bash(git add *)', 'Bash(git commit *)', 'Bash(git rev-parse*)', ...rules];
   const t0 = Date.now();
   // shortcut: spawns the native claude binary without a shell; npm's claude.cmd on Windows would need one. Add it if a local-tier machine uses the npm install.
   const r = spawnSync('claude', args, { cwd: dir, env, input: fs.readFileSync(brief, 'utf8'), encoding: 'utf8',

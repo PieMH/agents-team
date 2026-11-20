@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
-import { answers, decide, down, readConfig, status, up } from './local-llm.mjs';
+import { answers, decide, down, readConfig, status, up, workerPrompt } from './local-llm.mjs';
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'agents-team-local-'));
 const file = (name, body) => { const f = path.join(dir, name); fs.writeFileSync(f, body); return f; };
@@ -22,6 +22,13 @@ assert.equal(decide(null, false, 99).local, 'off');
 assert.deepEqual(decide(cfg0, true, 1), { local: 'on', start: false }, 'already serving: use it, even with little RAM');
 assert.match(decide(cfg0, false, 59.7).reason, /59 GB RAM free, the local model needs 60 GB/);
 assert.deepEqual(decide(cfg0, false, 61), { local: 'on', start: true });
+
+// --bare skips CLAUDE.md, so the worker prompt must carry the project's copy
+const proj = fs.mkdtempSync(path.join(dir, 'proj-'));
+assert.match(workerPrompt(proj), /You are a worker on an agents-team run/, 'worker contract always included');
+assert.doesNotMatch(workerPrompt(proj), /This project's CLAUDE\.md/, 'no CLAUDE.md -> nothing appended');
+fs.writeFileSync(path.join(proj, 'CLAUDE.md'), 'Never use moment.js.');
+assert.match(workerPrompt(proj), /This project's CLAUDE\.md\n\nNever use moment\.js\./, 'project CLAUDE.md appended');
 
 // a real start/stop cycle against a tiny server that answers /health
 const port = await new Promise((r) => { const s = net.createServer().listen(0, () => { const p = s.address().port; s.close(() => r(p)); }); });

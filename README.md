@@ -111,7 +111,7 @@ On Windows, keep Strata outside `AppData`: install it with `$env:STRATA_DATA_DIR
   - `workTimeoutMin` (default `45`).
 - The orchestrator starts the server only when the plan has light tasks, the server isn't already up, and enough RAM is free. It stops the server when the light tasks are done, but never one you started yourself. If the server can't start, light tasks go to Haiku and you get one line saying why.
 - Check a machine with `node skills/agents-team/local-llm.mjs status` (from the plugin folder).
-- A local worker runs `claude --bare -p` in its worktree, with its own empty profile (`~/.agents-team/claude-local`) and a dummy key. The local server never sees your login.
+- A local worker runs `claude --bare -p` in its worktree, with its own empty profile (`~/.agents-team/claude-local`) and a dummy key, so the local server never sees your login. Bare mode doesn't load CLAUDE.md, so the worker gets the worker contract plus the project's root `CLAUDE.md` as its system prompt. Its git access is limited to status, diff, log, show, add, commit and rev-parse.
 
 ### Git mode and plain mode
 

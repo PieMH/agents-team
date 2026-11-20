@@ -29,7 +29,7 @@ The flags are parameters; the rest of the arguments is the work description.
 | `--compact` | `on` | `on`: stop at the threshold and recommend a `/compact` to the user. `off`: never stop |
 | `--compact-at` | `500k` | Your context threshold (`500k`, `0.5m` or `500000`). Use about half your model's window |
 
-`--resume`: read `.agents-team/run.json` and its ledger, set run.json `session` to the session id above and `status` to `running`, then continue from the ledger's Next line with the parameters stored there.
+`--resume`: read `.agents-team/run.json` and its ledger, set run.json `session` to the session id above and `status` to `running`, then continue from the ledger's Next line with the parameters stored there. If run.json `local` is `on` and light tasks remain, run `… up` again first (§3), because a context-gate pause stopped it; store its `started` as `localStarted`.
 
 ## 1. Understand
 
@@ -63,7 +63,7 @@ Torn between two tiers? Pick the higher; a failed attempt costs more than the di
 
 **Local tier.** Run `node "${CLAUDE_SKILL_DIR}/local-llm.mjs" status`.
 - `"local":"off"`: light tasks run on haiku. If it gives a `reason`, tell the user in one line.
-- Otherwise, before the first light task, run `… up`. It starts the local server unless it already answers, but only with enough free RAM, and waits until it answers; a cold start can take a few minutes. It prints `{"local":"on","started":true|false}` or `{"local":"off","reason":…}`. On `off`, light tasks run on haiku and you tell the user the reason in one line.
+- Otherwise, before the first light task, run `… up` as a Bash call with `timeout: 660000`. A cold start can take minutes, and the default 2-minute limit would kill `up` while the server keeps starting, unowned. `up` starts the local server unless it already answers, but only with enough free RAM, and waits until it answers. It prints `{"local":"on","started":true|false}` or `{"local":"off","reason":…}`. On `off`, light tasks run on haiku and you tell the user the reason in one line.
 - Record `"local"` and `"localStarted"` (the `started` value) in run.json.
 - Stop the server with `… down` only when `localStarted` is true: as soon as no light task is queued or running, and at Close at the latest. Never stop a server the run did not start, and set `localStarted` to false once stopped.
 
