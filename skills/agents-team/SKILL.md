@@ -54,7 +54,7 @@ Torn between two tiers? Pick the higher; a failed attempt costs more than the di
 
 **Git repo** (`git rev-parse --is-inside-work-tree`):
 - If `git status --porcelain` shows changes, ask the user, because worktrees can't see uncommitted work: (a) they commit or stash first, then rerun; (b) you commit it as the run branch's first commit; (c) run in plain mode.
-- `git switch -c agents-team/<slug>`. Record the start branch and base sha. Append `.agents-team/` to `.git/info/exclude`.
+- `git switch -c agents-team/<slug>`. Record the start branch and base sha. Append `.agents-team/` to the file `git rev-parse --git-path info/exclude` prints (`.git` is a file, not a folder, when the project is itself a worktree).
 - Every task runs in its own worktree, cut from the run branch's current tip: `git worktree add .agents-team/wt/<ID> -b agents-team/<slug>-<ID>` (a flat name: git can't nest a branch under the existing `agents-team/<slug>`). Prefer disjoint file ownership anyway; overlaps turn into merge conflicts.
 
 **Plain mode** (no git, or chosen above): agents work in place. Tasks with overlapping owned files never run at the same time. Before a spawn, copy the task's owned files to `.agents-team/backup/<ID>/` so a failed attempt can be undone.
@@ -94,7 +94,7 @@ Previous attempt (retries only): <what it did, why it was rejected, what to keep
 
 ## 6. Verify each report
 
-Check evidence, not prose: the diff (`git -C <worktree> diff --stat <run tip at spawn>..HEAD`, then read only the risky hunks), the checks it claims (rerun the decisive one if the evidence is thin), and the acceptance criteria.
+Check evidence, not prose: the diff (`git -C <worktree> diff --stat <run tip at spawn>..HEAD`, then read only the risky hunks), the checks it claims (rerun the decisive one inside the worktree if the evidence is thin), and the acceptance criteria.
 
 - **Accept.** Git: land the task's own commits on the run branch, never a merge commit, so the run branch stays a linear list of real commits. Rebase the task onto the current run tip, `git -C .agents-team/wt/<ID> rebase agents-team/<slug>`, then in the main checkout `git merge --ff-only agents-team/<slug>-<ID>`, `git worktree remove .agents-team/wt/<ID>` and `git branch -d agents-team/<slug>-<ID>`. On a rebase conflict, `git -C .agents-team/wt/<ID> rebase --abort` and requeue the task at the same tier with the conflict noted. Plain: delete its backup.
 - **Reject** (wrong, incomplete or unverified) and escalate: haiku → sonnet (same effort) → opus (same effort) → opus at two effort levels higher (low→high, medium→xhigh, high or xhigh→max) → stop: mark it blocked and ask the user. Every retry, even a one-line fix, is a new agent from a fresh spawn; never send the failed agent back to redo it (no SendMessage to it, no reuse at another effort). The retry brief carries the "Previous attempt" line. Keep the role, unless the failure shows the task needed different expertise; then change it and log why. Git: drop the failed worktree and branch (`git worktree remove --force`, `git branch -D`), or cut the retry from the failed branch when most of it is good. Plain: restore the backup if the attempt left things worse.
@@ -119,7 +119,7 @@ The plugin's hook measures your real context on every spawn. With `compact` on, 
 
 ## 8. Final QA
 
-When every task is accepted or blocked, spawn `agents-team:qa` (model `opus`, effort `--effort`). Its brief: a `Role:` line for the change's dominant risk (Code Reviewer by default; Security Architect for auth, secrets or input handling; UI Finish-Gate Reviewer for UI work), the request, the acceptance criteria, the ledger path, and the change (git: `git diff <base>..agents-team/<slug>`; plain: the changed files). Triage the findings: each real one becomes a new task, routed and escalated like any other. Run QA again after the fixes, at most two extra rounds; then report whatever is still open.
+When every task is accepted or blocked, remove the worktrees that are left (keep blocked tasks' branches), so repo-wide checks see only the run branch. Then spawn `agents-team:qa` (model `opus`, effort `--effort`). Its brief: a `Role:` line for the change's dominant risk (Code Reviewer by default; Security Architect for auth, secrets or input handling; UI Finish-Gate Reviewer for UI work), the request, the acceptance criteria, the ledger path, and the change (git: `git diff <base>..agents-team/<slug>`; plain: the changed files). Triage the findings: each real one becomes a new task, routed and escalated like any other. Run QA again after the fixes, at most two extra rounds; then report whatever is still open.
 
 ## 9. Close
 
